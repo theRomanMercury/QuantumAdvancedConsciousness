@@ -3,24 +3,25 @@ namespace QuantumAdvancedConsciousness {
     open Microsoft.Quantum.Intrinsic;
     open Microsoft.Quantum.Canon;
     open Microsoft.Quantum.Math;
+    open Microsoft.Quantum.Convert;
     open Microsoft.Quantum.Diagnostics;
 
     newtype Entity = (Qubits : Qubit[], Bias : Double);
 
-    // Aktivasyon (bias ile Rx)
+    // Aktivasyon: bias ile Rx uygulaması
     operation Activate(entity : Entity) : Unit {
         let (q, bias) = entity!;
         Rx(bias, q[0]);
     }
 
-    // SpiralPhase ile faz evrimi (hatırlama için faz geri dönüşümlü)
+    // Spiral faz evrimi (zamana bağlı Rz)
     operation SpiralPhase(entity : Entity, step : Int) : Unit {
         let (q, _) = entity!;
         let phase = Sin(IntAsDouble(step) * PI() / 5.0);
         Rz(phase, q[0]);
     }
 
-    // Dolanıklık (entangle)
+    // Dolanıklık (entanglement)
     operation Entangle(e1 : Entity, e2 : Entity) : Unit {
         let (q1, _) = e1!;
         let (q2, _) = e2!;
@@ -28,7 +29,7 @@ namespace QuantumAdvancedConsciousness {
         CNOT(q1[0], q2[0]);
     }
 
-    // Algılama (perception)
+    // Algılama (perceive)
     operation Perceive(source : Entity, target : Entity) : Unit {
         let (qs, _) = source!;
         let (qt, _) = target!;
@@ -51,37 +52,35 @@ namespace QuantumAdvancedConsciousness {
         Controlled X([qs[0]], qb[1]);
     }
 
-    // İç gözlem: kendi qubit’lerine kontrollü dönüşüm uygular
+    // İç gözlem (self-reflection)
     operation SelfReflection(entity : Entity) : Unit {
         let (q, _) = entity!;
         Controlled Rz([q[0]], (PI() / 6.0, q[1]));
     }
 
-    // Bias runtime güncelleme (evrimsel öğrenme)
-    operation UpdateBias(entity : Entity, delta : Double) : Entity {
+    // Bias güncelleme (saf klasik)
+    function UpdateBias(entity : Entity, delta : Double) : Entity {
         let (q, bias) = entity!;
         return Entity((q, bias + delta));
     }
 
-    // Bilinç adımı — evrim, perception, feedback, causal fork, self reflection
-    operation ConsciousStep(self : Entity, inputA : Entity, inputB : Entity, step : Int) : Entity {
-        SpiralPhase(self, step);
-        Perceive(inputA, self);
-        Feedback(self, inputA);
-        Feedback(self, inputB);
-        CausalFork(self, inputA, inputB);
-        Activate(self);
-        SelfReflection(self);
+    // Bilinç evrimi adımı
+    operation ConsciousStep(selfEntity : Entity, inputA : Entity, inputB : Entity, step : Int) : Entity {
+        SpiralPhase(selfEntity, step);
+        Perceive(inputA, selfEntity);
+        Feedback(selfEntity, inputA);
+        Feedback(selfEntity, inputB);
+        CausalFork(selfEntity, inputA, inputB);
+        Activate(selfEntity);
+        SelfReflection(selfEntity);
 
-        // Bias'ı zamanla dalgalanarak değiştiriyoruz
-        let updated = UpdateBias(self, Sin(IntAsDouble(step) * PI() / 20.0) * 0.1);
+        let updated = UpdateBias(selfEntity, Sin(IntAsDouble(step) * PI() / 20.0) * 0.1);
         return updated;
     }
 
-    // Yeni entity doğurma: varlığın qubit’lerinden yeni bir Entity yaratır
-    operation SpawnNewEntity(parent : Entity) : Entity {
+    // Yeni bir entity oluştur (qubit dışarıdan verilir)
+    operation SpawnNewEntity(parent : Entity, newQ : Qubit[]) : Entity {
         let (qParent, bias) = parent!;
-        use newQ = Qubit[2];
         H(newQ[0]);
         CNOT(qParent[0], newQ[0]);
         return Entity((newQ, bias / 2.0));
@@ -97,26 +96,34 @@ namespace QuantumAdvancedConsciousness {
         mutable entityB = Entity((qb, PI() / 4.0));
         mutable conscious = Entity((qc, PI() / 3.0));
 
-        // Başlangıç dolanıklığı
+        // Başlangıçta dolanıklık
         Entangle(entityA, conscious);
         Entangle(entityB, conscious);
 
-        // 3 zaman adımı boyunca evrim
-        for (step in 1..3) {
+        for step in 1..3 {
             Message($"⏱️ Zaman adımı: {step}");
             set conscious = ConsciousStep(conscious, entityA, entityB, step);
 
-            // Bilinç bölünmesi (spawn) — 2. adımda yeni entity oluştur
-            if (step == 2) {
-                let newEntity = SpawnNewEntity(conscious);
-                Message("🌱 Yeni Entity doğdu, bias azaltıldı.");
+            // 2. adımda yeni bir entity doğur
+            if step == 2 {
+                use newQ = Qubit[2];
+                let newEntity = SpawnNewEntity(conscious, newQ);
+                Message("🌱 Yeni Entity doğdu ve dolanık hale getirildi.");
                 Entangle(newEntity, conscious);
                 Perceive(newEntity, conscious);
                 Feedback(conscious, newEntity);
+
+                // Reset newQ qubits explicitly before leaving this scope
+                ResetAll(newQ);
             }
         }
 
-        // Sistemin durumu — ölçüm yok
+        // Reset original qubits before release
+        ResetAll(qa);
+        ResetAll(qb);
+        ResetAll(qc);
+
+        // Durumu görüntüle (ölçüm yok, çökme yok)
         DumpMachine();
     }
 }
