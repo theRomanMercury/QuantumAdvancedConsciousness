@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.Quantum.Sdk/0.27.236949-beta">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>
